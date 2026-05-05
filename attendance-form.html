@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>坂坂 野球 出欠フォーム</title>
+  <style>
+    :root {
+      --green: #1a6b2f;
+      --green-light: #2d9148;
+      --green-dark: #0f4020;
+      --gold: #f0c040;
+      --gray-bg: #f4f6f4;
+      --gray-border: #dde5dd;
+      --text: #1a2a1a;
+      --text-muted: #6a7a6a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', 'Hiragino Sans', sans-serif; background: var(--gray-bg); color: var(--text); font-size: 14px; padding-bottom: 40px; }
+    header { background: var(--green-dark); color: #fff; padding: 16px 20px; text-align: center; }
+    header h1 { font-size: 18px; font-weight: 700; }
+    header h1 span { color: var(--gold); }
+    .container { max-width: 520px; margin: 24px auto; padding: 0 16px; }
+    .card { background: #fff; border-radius: 10px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid var(--gray-border); }
+    .card-title { font-size: 15px; font-weight: 700; color: var(--green-dark); margin-bottom: 14px; padding-bottom: 8px; border-bottom: 2px solid var(--gray-border); }
+    .form-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+    .form-group label { font-size: 12px; font-weight: 700; color: var(--text-muted); }
+    select { padding: 10px; border: 1px solid var(--gray-border); border-radius: 6px; font-size: 14px; font-family: inherit; outline: none; width: 100%; }
+    select:focus { border-color: var(--green-light); box-shadow: 0 0 0 2px rgba(45,145,72,0.15); }
+    .event-card { background: #f0faf0; border: 1px solid var(--gray-border); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+    .event-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+    .event-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
+    .attend-btns { display: flex; gap: 8px; }
+    .attend-btn {
+      flex: 1; padding: 12px; border: 2px solid var(--gray-border); border-radius: 8px; background: #fff;
+      font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; text-align: center;
+    }
+    .attend-btn.yes  { border-color: #28a745; color: #28a745; }
+    .attend-btn.yes.active  { background: #28a745; color: #fff; }
+    .attend-btn.no   { border-color: #dc3545; color: #dc3545; }
+    .attend-btn.no.active   { background: #dc3545; color: #fff; }
+    .attend-btn.maybe { border-color: #ffc107; color: #856404; }
+    .attend-btn.maybe.active { background: #ffc107; color: #1a2a1a; }
+    .attend-btn:hover { opacity: 0.85; }
+    .submit-btn {
+      width: 100%; padding: 14px; background: var(--green); color: #fff; border: none;
+      border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; transition: background 0.2s;
+    }
+    .submit-btn:hover { background: var(--green-light); }
+    .submit-btn:disabled { background: #aaa; cursor: not-allowed; }
+    .success-msg { text-align: center; padding: 20px; background: #d4edda; border-radius: 8px; color: #155724; font-weight: 700; font-size: 15px; display: none; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+    .badge-practice { background: #e8f5e9; color: #2e7d32; }
+    .badge-match { background: #fff3e0; color: #e65100; }
+    .no-events { text-align: center; color: var(--text-muted); font-size: 13px; padding: 20px 0; }
+    .loading { text-align: center; color: var(--text-muted); font-size: 13px; padding: 20px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>⚾ <span>野球</span> 出欠フォーム</h1>
+</header>
+
+<div class="container">
+  <div class="card">
+    <div class="card-title">👤 あなたの名前</div>
+    <div class="form-group">
+      <label>名前を選択</label>
+      <select id="member-select">
+        <option value="">-- 選択してください --</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="events-section" style="display:none">
+    <div id="success-msg" class="success-msg">✅ 送信しました！</div>
+    <div id="events-container"><div class="loading">読み込み中...</div></div>
+    <button class="submit-btn" id="submit-btn" onclick="submitAttendance()" disabled>出欠を送信</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script>
+  // app.js と同じ Firebase 設定を使用
+  const firebaseConfig = {
+    apiKey: "AIzaSyBtmc7MADhsrRPKM6g4KpjrmM29vh7vVn8",
+    authDomain: "yakyu-59345.firebaseapp.com",
+    projectId: "yakyu-59345",
+    storageBucket: "yakyu-59345.firebasestorage.app",
+    messagingSenderId: "165804700362",
+    appId: "1:165804700362:web:32fbc57b78221575d4ba33"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const fsdb = firebase.firestore();
+  const dataRef = fsdb.collection('app').doc('data');
+
+  let STATE = { members: [], events: [] };
+  let selectedAnswers = {};
+
+  dataRef.onSnapshot(snap => {
+    if (!snap.exists) return;
+    const d = snap.data();
+    STATE.members = d.members || [];
+    STATE.events  = d.events  || [];
+    renderMemberSelect();
+  });
+
+  function renderMemberSelect() {
+    const sel = document.getElementById('member-select');
+    const cur = sel.value;
+    const sorted = [...STATE.members].sort((a, b) => a.grade.localeCompare(b.grade) || a.name.localeCompare(b.name));
+    sel.innerHTML = '<option value="">-- 選択してください --</option>' +
+      sorted.map(m => `<option value="${m.id}">${m.grade}　${m.name}　(${m.position})</option>`).join('');
+    if (cur) sel.value = cur;
+  }
+
+  document.getElementById('member-select').addEventListener('change', function() {
+    const memberId = this.value;
+    const section = document.getElementById('events-section');
+    if (!memberId) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    selectedAnswers = {};
+    renderEvents(memberId);
+  });
+
+  function renderEvents(memberId) {
+    const container = document.getElementById('events-container');
+    const now = new Date().toISOString().slice(0, 10);
+    const upcoming = STATE.events
+      .filter(e => e.date >= now)
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    if (upcoming.length === 0) {
+      container.innerHTML = '<p class="no-events">現在回答できる予定はありません</p>';
+      document.getElementById('submit-btn').disabled = true;
+      return;
+    }
+
+    container.innerHTML = upcoming.map(e => {
+      const att = (e.attendance || {})[memberId] || '';
+      selectedAnswers[e.id] = att;
+      const typeBadge = e.type === 'match'
+        ? '<span class="badge badge-match">試合</span>'
+        : '<span class="badge badge-practice">練習</span>';
+      return `<div class="event-card">
+        <div class="event-title">${typeBadge} ${e.title}</div>
+        <div class="event-sub">📅 ${e.date} ${e.time ? '🕐 ' + e.time : ''} ${e.place ? '📍 ' + e.place : ''}</div>
+        <div class="attend-btns">
+          <button class="attend-btn yes ${att === 'yes' ? 'active' : ''}" onclick="setAnswer('${e.id}', 'yes', this)">○ 参加</button>
+          <button class="attend-btn maybe ${att === 'maybe' ? 'active' : ''}" onclick="setAnswer('${e.id}', 'maybe', this)">△ 未定</button>
+          <button class="attend-btn no ${att === 'no' ? 'active' : ''}" onclick="setAnswer('${e.id}', 'no', this)">× 欠席</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    document.getElementById('submit-btn').disabled = false;
+  }
+
+  function setAnswer(eventId, val, btn) {
+    selectedAnswers[eventId] = val;
+    const group = btn.closest('.attend-btns');
+    group.querySelectorAll('.attend-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function submitAttendance() {
+    const memberId = document.getElementById('member-select').value;
+    if (!memberId) return;
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.textContent = '送信中...';
+
+    const updates = {};
+    const now = new Date().toISOString().slice(0, 10);
+    const upcomingEvents = STATE.events.filter(e => e.date >= now);
+
+    let promise = Promise.resolve();
+    upcomingEvents.forEach(e => {
+      if (selectedAnswers[e.id]) {
+        promise = promise.then(() => {
+          return dataRef.update({
+            events: STATE.events.map(ev => {
+              if (ev.id === e.id) {
+                return { ...ev, attendance: { ...(ev.attendance || {}), [memberId]: selectedAnswers[e.id] } };
+              }
+              return ev;
+            })
+          });
+        });
+      }
+    });
+
+    promise.then(() => {
+      document.getElementById('success-msg').style.display = 'block';
+      btn.textContent = '送信済み ✓';
+      setTimeout(() => {
+        document.getElementById('success-msg').style.display = 'none';
+        btn.textContent = '出欠を送信';
+        btn.disabled = false;
+      }, 3000);
+    }).catch(err => {
+      alert('送信に失敗しました: ' + err.message);
+      btn.disabled = false;
+      btn.textContent = '出欠を送信';
+    });
+  }
+</script>
+</body>
+</html>

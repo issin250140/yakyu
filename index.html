@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>坂坂 野球 管理画面</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1>⚾ <span>野球</span></h1>
+  <span class="header-sub">運営管理システム</span>
+</header>
+
+<nav>
+  <button class="nav-btn active" data-page="dashboard">⚾ ホーム</button>
+  <button class="nav-btn" data-page="members">⚾ メンバー</button>
+  <button class="nav-btn" data-page="schedule">⚾ スケジュール</button>
+  <button class="nav-btn" data-page="formation">⚾ フォーメーション</button>
+</nav>
+
+<main>
+
+  <!-- ===== ダッシュボード ===== -->
+  <section id="page-dashboard" class="page active">
+    <div id="notice-display" class="notice-box" style="display:none"></div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-num" id="stat-members">0</div>
+        <div class="stat-label">メンバー数</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-events">0</div>
+        <div class="stat-label">今月の予定</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-next-attend">-</div>
+        <div class="stat-label">次回参加予定</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📢 お知らせ</div>
+      <div class="form-row">
+        <div class="form-group" style="flex:1">
+          <textarea id="notice-input" rows="2" placeholder="お知らせを入力..."></textarea>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="saveNotice()">保存</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📅 直近のスケジュール</div>
+      <div id="upcoming-events"></div>
+    </div>
+  </section>
+
+  <!-- ===== メンバー ===== -->
+  <section id="page-members" class="page">
+    <div class="card">
+      <div class="card-title">👤 メンバー追加</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>名前</label>
+          <input type="text" id="m-name" placeholder="山田 太郎">
+        </div>
+        <div class="form-group" style="max-width:100px">
+          <label>学年</label>
+          <select id="m-grade">
+            <option value="1年">1年</option>
+            <option value="2年">2年</option>
+            <option value="3年">3年</option>
+            <option value="4年">4年</option>
+          </select>
+        </div>
+        <div class="form-group" style="max-width:110px">
+          <label>ポジション</label>
+          <select id="m-position">
+            <option value="GK">GK</option>
+            <option value="DF">DF</option>
+            <option value="MF">MF</option>
+            <option value="FW">FW</option>
+          </select>
+        </div>
+        <div class="form-group" style="max-width:80px">
+          <label>背番号</label>
+          <input type="number" id="m-number" placeholder="10" min="1" max="99">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="addMember()">追加</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">👥 メンバー一覧 (<span id="member-count">0</span>名)</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>名前</th>
+              <th>学年</th>
+              <th>ポジション</th>
+              <th>背番号</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="members-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== スケジュール ===== -->
+  <section id="page-schedule" class="page">
+    <div class="card">
+      <div class="card-title">📅 予定追加</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>タイトル</label>
+          <input type="text" id="e-title" placeholder="第○回練習・〇〇戦 vs △△">
+        </div>
+        <div class="form-group" style="max-width:110px">
+          <label>種別</label>
+          <select id="e-type">
+            <option value="practice">練習</option>
+            <option value="match">試合</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="max-width:160px">
+          <label>日付</label>
+          <input type="date" id="e-date">
+        </div>
+        <div class="form-group" style="max-width:120px">
+          <label>時間</label>
+          <input type="time" id="e-time">
+        </div>
+        <div class="form-group">
+          <label>場所</label>
+          <input type="text" id="e-place" placeholder="○○グラウンド">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="addEvent()">追加</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 スケジュール一覧</div>
+      <div id="events-list"></div>
+    </div>
+  </section>
+
+  <!-- ===== フォーメーション ===== -->
+  <section id="page-formation" class="page">
+    <div class="card">
+      <div class="card-title">⚾ フォーメーション作成</div>
+      <div class="formation-wrap">
+        <div class="pitch-container">
+          <div class="pitch baseball-field" id="pitch">
+            <div class="pitch-lines">
+              <svg viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg">
+                <!-- 外野グラス（扇形） -->
+                <path d="M 50,102 L 3,20 Q 50,2 97,20 Z" fill="#3d7a3d"/>
+                <!-- ファウルゾーン -->
+                <rect x="0" y="0" width="100" height="150" fill="#c8a060" opacity="0"/>
+                <!-- 内野ダート（円形） -->
+                <circle cx="50" cy="76" r="30" fill="#c8a060" opacity="0.85"/>
+                <!-- ダイヤモンド内グラス -->
+                <polygon points="50,102 78,78 50,54 22,78" fill="#3d7a3d" opacity="0.7"/>
+                <!-- ベースライン -->
+                <polygon points="50,102 78,78 50,54 22,78" fill="none" stroke="white" stroke-width="0.8" opacity="0.8"/>
+                <!-- ファウルライン -->
+                <line x1="50" y1="102" x2="3" y2="20" stroke="white" stroke-width="0.7" opacity="0.6"/>
+                <line x1="50" y1="102" x2="97" y2="20" stroke="white" stroke-width="0.7" opacity="0.6"/>
+                <!-- 外野フェンス弧 -->
+                <path d="M 3,20 Q 50,2 97,20" fill="none" stroke="white" stroke-width="1" opacity="0.6"/>
+                <!-- ピッチャーズマウンド -->
+                <circle cx="50" cy="72" r="3.5" fill="#b09050"/>
+                <!-- ホームベース -->
+                <polygon points="50,99 53,102 50,105 47,102" fill="white"/>
+                <!-- 1塁ベース -->
+                <rect x="76" y="76" width="4" height="4" fill="white" transform="rotate(45 78 78)"/>
+                <!-- 2塁ベース -->
+                <rect x="48" y="52" width="4" height="4" fill="white" transform="rotate(45 50 54)"/>
+                <!-- 3塁ベース -->
+                <rect x="20" y="76" width="4" height="4" fill="white" transform="rotate(45 22 78)"/>
+                <!-- バッターボックス -->
+                <rect x="43" y="100" width="5" height="8" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="0.5"/>
+                <rect x="52" y="100" width="5" height="8" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="0.5"/>
+              </svg>
+            </div>
+            <!-- プレイヤードットはJSで生成 -->
+          </div>
+        </div>
+
+        <div class="formation-sidebar">
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:4px">守備配置</label>
+            <select class="formation-preset-select" id="formation-preset" onchange="applyPreset()">
+              <option value="標準守備">標準守備 (9人)</option>
+              <option value="DH制">DH制 (10人)</option>
+              <option value="内野シフト">内野シフト</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:4px">メンバー（クリックして選択→ポジションをクリック）</label>
+            <ul class="bench-list" id="bench-list"></ul>
+          </div>
+
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:4px">名前をつけて保存</label>
+            <input type="text" class="formation-name-input" id="formation-name" placeholder="例: 5/10練習">
+          </div>
+          <button class="btn btn-gold" onclick="saveFormation()">💾 保存</button>
+          <button class="btn btn-ghost btn-sm" onclick="clearFormation()">クリア</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📂 保存済みフォーメーション</div>
+      <div class="saved-formations" id="saved-formations"></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ===== 出欠モーダル ===== -->
+<div class="modal-overlay" id="attend-modal">
+  <div class="modal">
+    <div class="modal-title" id="attend-modal-title">出欠状況</div>
+    <div class="attend-summary" id="attend-summary"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>名前</th><th>ポジション</th><th>出欠</th></tr></thead>
+        <tbody id="attend-tbody"></tbody>
+      </table>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('attend-modal')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== フォーメーション閲覧モーダル ===== -->
+<div class="modal-overlay" id="view-formation-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-title" id="view-formation-title"></div>
+    <div id="view-formation-pitch-wrap"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('view-formation-modal')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
